@@ -1,7 +1,7 @@
 const express=require("express")
 const dotenv=require("dotenv")
 let connectDB=require("./config/connectDB.js")
-//const todo_router=require("./routers/todo.routes.js")
+const custom_router=require("./routers/custom.routes.js")
 //const user_router=require("./routers/user.routes.js")
 // let todos=require("./models/todo.models.js")
 // let users=require("./models/users.models.js")
@@ -23,7 +23,7 @@ app.use(cookieParser());
      connectDB().then(()=>{
         
        app.use("/",auth_router);
-       //app.use("/",todo_router);
+       app.use("/customer",custom_router);
        //app.use("/",user_router);
       
        app.listen(port,async()=>{ console.log(`server is running successfully, Hana!`)})

@@ -72,6 +72,7 @@ const signIn=async(req,res)=>{
          if(auth){
             const token=createtoken(found._id);
             res.cookie("token",token,{httpOnly:true,maxAge:60*60*24*1000});
+            console.log("the token is",token);
             res.status(200).send({
               "success": true,
               "user":{
@@ -104,7 +105,13 @@ const signIn=async(req,res)=>{
 }
 
 const signOut = async (req, res) => {
-    res.cookie("token", "", { httpOnly: true, expires: new Date(0) }); // Expire the cookie
+    console.log("Before Clearing:", req.cookies.token); // Log the token before clearing
+
+    // Expire the cookie
+    res.cookie("token", "", { httpOnly: true, expires: new Date(0) });
+
+    console.log("After Clearing:", req.cookies.token); // Log the token after clearing
+
     res.status(200).send({
         success: true,
         message: "User signed out successfully"
