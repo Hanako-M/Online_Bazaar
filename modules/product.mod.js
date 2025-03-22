@@ -30,6 +30,13 @@ const prodschema=new Schema({
     }, 
     photo:{
         type:String
+    },quantity:{
+        type:Number,
+        default:0
+    },
+    inStock:{
+        type:Number,
+        default:quantity
     }
 })
 const product=mongoose.model('todos',prodschema)

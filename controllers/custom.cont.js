@@ -55,9 +55,22 @@ const viewOrders=async(req,res)=>{
 const makeOrder=async(req,res)=>{    
     const {userid}=req.user;
     try{
+       
         const customer=await customers.findById(userid);
+        if(!customer.cart.length){
+            return res.status(400).json({success:false,message:"cart is empty"});
+        }
+        for (let item of customer.cart) {
+            if (item.inStock < 1) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: `Not enough stock for product: ${item.name}` 
+                });
+            }
+        }
         const neworder=new orders({products:customer.cart});
         await neworder.save();
+        
         customer.orders.push(neworder.__id);
         customer.cart=[];//empty the cart
         await customer.save();

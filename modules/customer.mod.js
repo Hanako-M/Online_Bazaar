@@ -21,7 +21,7 @@ const customerschema=new Schema({
         ref:'orders',
         //required:true
     },cart:[{
-        type:Schema.Types.ObjectId,
+        type:Schema.Types,
         ref:'product',
         
     }]

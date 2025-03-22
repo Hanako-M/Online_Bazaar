@@ -6,11 +6,11 @@ const categschema=new Schema({
         type:String,
         required:true
     },
-    products:{
+    products:[{
         type:Schema.Types.ObjectId,
         ref:'product',
         
-    }
+    }]
 })
 const categories=mongoose.model('categories',categschema)
 module.exports=categories

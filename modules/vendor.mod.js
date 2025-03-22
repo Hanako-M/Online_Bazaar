@@ -1,4 +1,4 @@
-mongoose=require("mongoose")
+const mongoose=require("mongoose")
 const bcrypt = require('bcryptjs');
 const Schema=mongoose.Schema
 
@@ -6,6 +6,10 @@ const vendorschema=new Schema({
     name:{
         type:String,
         required:true
+    },
+    phone:{
+        type:String,
+        minLength:11
     },
     email:{
         type:String,
