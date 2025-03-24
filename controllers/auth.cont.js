@@ -8,7 +8,7 @@ const bcrypt=require('bcryptjs');
 
 //craeting tokens
 const createtoken=(id)=>{
-  return jwt.sign({id},process.env.JWT_SECRET,{expiresIn:60*60*24}/*1 day*/);
+  return jwt.sign({id},process.env.JWT_SECRET,{expiresIn:60*60*24*60}/*1 day*/);
 }
 
 const customerSignUp = async (req, res) => {
@@ -35,30 +35,29 @@ const customerSignUp = async (req, res) => {
     }
 };
 
-const vendorSignUp= async(req,res)=>{
-    const{name,email,password,}=req.body;
-    console.log(name,email,password);
-    try{
-      // const user= await User.create({username,email,password});
-      const newvend = new vendor({
-        name,
-        email,
-        password
-      });
-      await newvend.save();
-      // const token=createtoken(user._id);
-      // res.cookie("token",token,{httpOnly:true,maxAge:60*60*24*1000});
-    //   res.send({token});
+const vendorSignUp = async (req, res) => {
+    const { name, email, password } = req.body;
+    console.log(name, email, password);
+
+    try {
+        const newvend = new vendor({
+            name,
+            email,
+            password
+        });
+        await newvend.save();
+
+        // ✅ Return here to prevent further execution
+        return res.send({
+            "success": true,
+            "message": "Vendor registered successfully"
+        });
+    } catch (err) {
+        // ✅ Return here to prevent execution from continuing to res.send()
+        return res.status(404).json({ "error": "Something went wrong" });
     }
-    catch(err){
-       res.json({"error":"something went wrong"});
-    }
-    res.send({
-        "success": true,
-        "message": "vendor registered successfully"
-      });
-     
-}
+};
+
 const signIn=async(req,res)=>{
     const {email,password}=req.body;
     try{
@@ -67,7 +66,7 @@ const signIn=async(req,res)=>{
         const found= custfound || vendfound;//if custfound is null then vendfound will be assigned to found
         console.log(found);
         if(found){
-         const auth = bcrypt.compare(password, found.password);
+         const auth = await bcrypt.compare(password, found.password);
          console.log(found.password);
          if(auth){
             const token=createtoken(found._id);
@@ -109,8 +108,6 @@ const signOut = async (req, res) => {
 
     // Expire the cookie
     res.cookie("token", "", { httpOnly: true, expires: new Date(0) });
-
-    console.log("After Clearing:", req.cookies.token); // Log the token after clearing
 
     res.status(200).send({
         success: true,

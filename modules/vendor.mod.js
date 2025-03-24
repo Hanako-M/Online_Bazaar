@@ -24,10 +24,10 @@ const vendorschema=new Schema({
         type:Schema.Types.ObjectId,
         ref:'company',
         //required:true
-    }, products:{
+    }, products:[{
         type:Schema.Types.ObjectId,
         ref:'product',
-    }
+    }]
 })
 vendorschema.pre('save',function(next){
     //const salt=bcrypt.genSalt();//salt to put in the begining of the password

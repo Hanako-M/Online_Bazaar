@@ -21,7 +21,7 @@ const customerschema=new Schema({
         ref:'orders',
         //required:true
     },cart:[{
-        type:Schema.Types,
+        type:Schema.Types.ObjectId,
         ref:'product',
         
     }]
@@ -31,7 +31,7 @@ customerschema.pre('save',function(next){
     if (!this.isModified("password")) {
        return next();
     }
-    this.password=bcrypt.hashSync(this.password,10);//hash the password + the salt
+    this.password=bcrypt.hash(this.password,10);//hash the password + the salt
     next();
 })
 const customer=mongoose.model('customer',customerschema)
