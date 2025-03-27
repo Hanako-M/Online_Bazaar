@@ -23,8 +23,9 @@ const customerschema=new Schema({
     },cart:[{
         type:Schema.Types.ObjectId,
         ref:'product',
-        
-    }]
+    }],reviews:[{
+        type:Schema.Types.ObjectId,
+        ref:'review'}]
 })
 customerschema.pre('save',function(next){
     //const salt=bcrypt.genSalt();//salt to put in the begining of the password

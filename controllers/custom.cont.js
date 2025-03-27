@@ -1,6 +1,7 @@
 const customers=require("../modules/customer.mod.js")
 const orders=require("../modules/orders.mod.js")
 const product=require("../modules/product.mod.js")
+const reviews=require("../modules/review.mod.js")
 
 const addtoCart=async(req,res)=>{
     const {productid}=req.body;
@@ -104,11 +105,50 @@ const cancelOrder=async(req,res)=>{
         res.status(500).json({error:"something went wrong in canceling the order"});
     }
 }
+const addreview=async(req,res)=>{
+    const {orderid,productid,review,rating}=req.body;
+    const {userid}=req.user;
+    try{
+        const customer=await customers.findById(userid);
+        const prod=await product.findById(productid);
+        const order=await orders.findById(orderid);
+        if(!prod){
+            return res.status(404).json({success:false,message:"product not found"}); 
+        }if(!order){
+            return res.status(404).json({success:false,message:"order not found"}); 
+        }
+        if(!order.products.includes(productid)){
+            return res.status(400).json({success:false,message:"product is not in the order"});
+        }   
+        if(order.status!=="delivered"){
+            return res.status(400).json({success:false,message:"order is not delivered yet, you're not allowed to review"});
+        }
+       // Create new review
+       const newReview = new reviews({
+        review,
+        rating,
+        customer: userid,
+        product: productid
+    });
+    await newReview.save();
+      // Add review to product
+      product.reviews.push(newReview._id);
+      await product.save();
+      // Add review to customer
+      customer.reviews.push(newReview._id);
+      await customer.save();
+
+        res.status(200).json({success:true,message:"review added successfully"});
+    }catch(err){
+        res.status(500).json({error:"something went wrong in adding review"});
+    }
+}  
 module.exports={
     addtoCart,
     viewCart,
     removefromCart,
     viewOrders,
     makeOrder,
-    cancelOrder
+    cancelOrder,
+    addreview
 }

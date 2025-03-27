@@ -34,7 +34,10 @@ const prodschema=new Schema({
     inStock:{
         type:Number,
         default:0
-    }
+    },reviews:[{
+        type:Schema.Types.ObjectId,
+        ref:'review'
+    }]
 })
 const product=mongoose.model('product',prodschema)
 module.exports=product

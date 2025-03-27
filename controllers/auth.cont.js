@@ -8,7 +8,7 @@ const bcrypt=require('bcryptjs');
 
 //craeting tokens
 const createtoken=(id)=>{
-  return jwt.sign({id},process.env.JWT_SECRET,{expiresIn:60*60*24*60}/*1 day*/);
+  return jwt.sign({id},process.env.JWT_SECRET,{expiresIn:60*60*24*1000}/*1 day*/);
 }
 
 const customerSignUp = async (req, res) => {

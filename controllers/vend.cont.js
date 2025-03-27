@@ -101,8 +101,29 @@ const updateProduct = async (req, res) => {
     }
 };
 
-
-
+const addQuantity=async(req,res)=>{ 
+    const {productid}=req.body;
+    const {userid}=req.user;
+    const{quantity}=req.body;
+    try{
+        const vendor=await vendors.findById(userid);
+        if(!vendor){
+            return res.status(404).json({success:false,message:"vendor not found"});
+        }
+        const product=await products.findById(productid);
+        if(!product){
+            return res.status(404).json({success:false,message:"product not found"});
+        }
+        if(product.vendor.toString()!==userid){
+            return res.status(403).json({success:false,message:"Unauthorized to update this product"});
+        }
+        product.inStock+=quantity;
+        await product.save();
+        res.status(200).json({success:true,message:"quantity added successfully"});
+    }catch(err){    
+        res.status(500).json({error:"something went wrong in adding quantity"});
+    }   
+}
 
 
 
