@@ -19,7 +19,11 @@ const orderschema=new Schema({
         required:true
     },createdAt: 
     { type: Date,
-     default: Date.now }
+     default: Date.now },
+     status:{
+         type:String,
+         default:'pending'
+     }
 })
 const orders=mongoose.model('orders',orderschema)
 module.exports=orders

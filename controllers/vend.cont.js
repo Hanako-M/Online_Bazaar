@@ -124,7 +124,41 @@ const addQuantity=async(req,res)=>{
         res.status(500).json({error:"something went wrong in adding quantity"});
     }   
 }
-
-
-
-module.exports={postProducts,viewProducts,removeProduct,updateProduct}
+const viewInfo=async(req,res)=>{
+    const {userid}=req.user;
+    try{
+        const vendor=await vendors.findById(userid);
+        res.status(200).json({success:true,
+            name:vendor.name,
+            email:vendor.email,
+            phone:vendor.phone,
+            company:vendor.company,
+            products:vendor.products,
+        });
+    }catch(err){
+        res.status(500).json({error:"something went wrong in viewing the info"});
+    }
+}
+const discount=async(req,res)=>{
+    const {userid}=req.user;
+    const {productid,discount}=req.body;
+    try{
+        const vendor=await vendors.findById(userid);
+        if(!vendor){
+            return res.status(404).json({success:false,message:"vendor not found"});
+        }
+        const product=await products.findById(productid);
+        if(!product){
+            return res.status(404).json({success:false,message:"product not found"});
+        }
+        if(product.vendor.toString()!==userid){
+            return res.status(403).json({success:false,message:"Unauthorized to update this product"});
+        }
+        product.price-=product.price*discount/100;
+        await product.save();
+        res.status(200).json({success:true,message:"discount added successfully"});
+    }catch(err){    
+        res.status(500).json({error:"something went wrong in adding discount"});
+    }   
+}
+module.exports={postProducts,viewProducts,removeProduct,updateProduct,addQuantity,viewInfo,discount}

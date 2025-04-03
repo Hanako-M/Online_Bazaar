@@ -12,15 +12,16 @@ const createtoken=(id)=>{
 }
 
 const customerSignUp = async (req, res) => {
-    const { username, email, password } = req.body;
-    console.log(username, email, password);
+    const { username,email, password,address } = req.body;
+    console.log(username, email, password,address);
 
     try {
         const hashedPassword = await bcrypt.hash(password, 10);
         const newcust = new customer({
             username,
             email,
-            password: hashedPassword
+            password: hashedPassword,
+            address
         });
         await newcust.save();
 

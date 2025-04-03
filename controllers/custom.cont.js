@@ -143,6 +143,16 @@ const addreview=async(req,res)=>{
         res.status(500).json({error:"something went wrong in adding review"});
     }
 }  
+const viewInfo=async(req,res)=>{
+    const {userid}=req.user;
+    try{
+        const customer=await customers.findById(userid).populate("orders").populate("cart").populate("reviews");
+        res.status(200).json({success:true,customer,username:customer.username,email:customer.email,phone:customer.phone,address:customer.address});
+    }catch(err){
+        res.status(500).json({error:"something went wrong in viewing the customer info"});
+    }
+}
+
 module.exports={
     addtoCart,
     viewCart,
