@@ -13,6 +13,9 @@ const prodschema=new Schema({
         type:Number,
         required:true
     },
+    priceAfterdiscount:{
+        type:Number,
+    },
     category:{
         type:Schema.Types.ObjectId,
         ref:'categories',
@@ -28,7 +31,7 @@ const prodschema=new Schema({
         ref:'company',
         //required:true
     }, 
-    photo:{
+    image:{
         type:String
     },
     inStock:{

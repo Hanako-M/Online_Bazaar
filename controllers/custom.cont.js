@@ -23,6 +23,7 @@ const viewCart=async(req,res)=>{
     const {userid}=req.user;
     try{
         const customer=await customers.findById(userid).populate("cart");
+
         res.status(200).json({success:true,cart:customer.cart});
     }catch(err){
         res.status(500).json({error:"something went wrong in viewing the cart"});
@@ -47,7 +48,8 @@ const viewOrders=async(req,res)=>{
     const {userid}=req.user;
     try{
         const customer=await customers.findById(userid).populate("orders");
-        res.status(200).json({success:true,orders:customer.orders});
+        res.status(200).json({success:true,
+            orders: customer.orders});
     }catch(err){
         res.status(500).json({error:"something went wrong in viewing the orders"});
     }
@@ -77,6 +79,7 @@ const makeOrder=async(req,res)=>{
         await customer.save();
         res.status(200).json({success:true,message:"order is made successfully"});
     }catch(err){
+        console.log(err)
         res.status(500).json({error:"something went wrong in making the order"});
     }
 }

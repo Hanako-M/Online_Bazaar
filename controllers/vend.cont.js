@@ -2,11 +2,11 @@ const vendors=require("../modules/vendor.mod.js")
 const orders=require("../modules/orders.mod.js")
 const products=require("../modules/product.mod.js")
 const categories=require("../modules/categories.mod.js")
-const product = require("../modules/product.mod.js")
+const companies=require("../modules/company.mod.js")
 const postProducts = async (req, res) => {
-    const { title, description, price, category, photo, quantity } = req.body;
+    const { title, description, price, category, image, quantity } = req.body;
     const { userid } = req.user;
-
+    
     try {
         const vendor = await vendors.findById(userid);
         // ✅ Correct query for category search
@@ -22,9 +22,9 @@ const postProducts = async (req, res) => {
             title,
             description,
             price,
-            category: categoryData._id, // ✅ Use category `_id`
+            category:categoryData._id, // ✅ Use category `_id`
             vendor: userid,
-            photo,
+            image,
             quantity,
             inStock: quantity // ✅ Directly set `inStock`
         });
@@ -51,20 +51,39 @@ const viewProducts=async(req,res)=>{
         res.status(500).json({error:"something went wrong in viewing the products"});
     }
 }
-const removeProduct=(req,res)=>{
-    const {productid}=req.body;
-    const {userid}=req.user;
-    vendors.findById(userid).then((vendor)=>{
-        if(!vendor){
-            return res.status(404).json({success:false,message:"vendor not found"});
-        }
-        vendor.products=vendor.products.filter((product)=>product.toString()!==productid);
-        products.findByIdAndDelete(productid);
-        vendor.save();
-        res.status(200).json({success:true,message:"product is removed successfully"});
-    }).catch((err)=>{
-        res.status(500).json({error:"something went wrong in removing the product"});
-    })
+const removeProduct=async(req,res)=>{
+    const { productid } = req.body;
+const { userid } = req.user;
+
+try {
+    const vendor = await vendors.findById(userid);
+    if (!vendor) {
+        return res.status(404).json({ success: false, message: "Vendor not found" });
+    }
+
+    const product = await products.findById(productid);
+    if (!product) {
+        return res.status(404).json({ success: false, message: "Product not found" });
+    }
+
+    // ✅ Check authorization
+    if (product.vendor.toString() !== userid) {
+        return res.status(403).json({ success: false, message: "Unauthorized to delete this product" });
+    }
+
+    // ✅ Remove product reference from vendor
+    vendor.products = vendor.products.filter((p) => p.toString() !== productid);
+
+    await product.deleteOne();
+    await vendor.save();
+
+    res.status(200).json({ success: true, message: "Product removed successfully" });
+
+} catch (err) {
+    console.error("Remove product error:", err);
+    res.status(500).json({ error: "Something went wrong while removing the product" });
+}
+
 }
 const updateProduct = async (req, res) => {
     const { productid, title, description, price, category, photo, quantity } = req.body;
@@ -102,9 +121,9 @@ const updateProduct = async (req, res) => {
 };
 
 const addQuantity=async(req,res)=>{ 
-    const {productid}=req.body;
+    const {productid,quantity}=req.body;
     const {userid}=req.user;
-    const{quantity}=req.body;
+    
     try{
         const vendor=await vendors.findById(userid);
         if(!vendor){
@@ -123,6 +142,41 @@ const addQuantity=async(req,res)=>{
     }catch(err){    
         res.status(500).json({error:"something went wrong in adding quantity"});
     }   
+}
+const editInfo=async(req,res)=>{
+    const {userid}=req.user;
+    const {name,email,phone,company}=req.body;
+    try{
+        const vendor=await vendors.findById(userid);
+        if(!vendor){
+            return res.status(404).json({success:false,message:"vendor not found"});
+        }
+        if(name) vendor.name=name;
+        if(email) vendor.email=email;
+        if(phone) vendor.phone=phone;
+        if (company) {
+            vendor.company = company; // Initially assign the name
+        
+            let companyFound = await companies.findOne({ name: company });
+        
+            if (!companyFound) {
+                try {
+                    companyFound = await companies.create({ name: company });
+                } catch (err) {
+                    console.error("Company creation error:", err);
+                }
+            }
+        
+            if (companyFound) {
+                vendor.company = companyFound._id; // Assign ObjectId correctly
+            }
+        }
+        await vendor.save();
+        res.status(200).json({success:true,message:"info updated successfully"});
+    }catch(err){
+        console.log(err)    
+        res.status(500).json({error:"something went wrong in updating the info"});
+    }
 }
 const viewInfo=async(req,res)=>{
     const {userid}=req.user;
@@ -154,11 +208,12 @@ const discount=async(req,res)=>{
         if(product.vendor.toString()!==userid){
             return res.status(403).json({success:false,message:"Unauthorized to update this product"});
         }
-        product.price-=product.price*discount/100;
+        product.priceAfterdiscount=product.price-product.price*discount/100;
         await product.save();
         res.status(200).json({success:true,message:"discount added successfully"});
     }catch(err){    
+        console.log(err);
         res.status(500).json({error:"something went wrong in adding discount"});
     }   
 }
-module.exports={postProducts,viewProducts,removeProduct,updateProduct,addQuantity,viewInfo,discount}
+module.exports={editInfo,postProducts,viewProducts,removeProduct,updateProduct,addQuantity,viewInfo,discount}
