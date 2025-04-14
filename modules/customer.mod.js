@@ -19,16 +19,27 @@ const customerschema=new Schema({
         type:String,
         required:true,
         minlength:6
-    },orders:{
+    },orders:[{
         type:Schema.Types.ObjectId,
         ref:'orders',
         //required:true
-    },cart:[{
+    }],cart: [{
+        product: {
+          type: Schema.Types.ObjectId,
+          ref: 'product'
+        },
+        quantity: {
+          type: Number,
+          default: 1
+        }
+      }]
+      ,reviews:[{
         type:Schema.Types.ObjectId,
-        ref:'product',
-    }],reviews:[{
-        type:Schema.Types.ObjectId,
-        ref:'review'}]
+        ref:'review'}],
+        phone:{
+            type:String,
+            minLength:11
+        }
 })
 customerschema.pre('save',function(next){
     //const salt=bcrypt.genSalt();//salt to put in the begining of the password

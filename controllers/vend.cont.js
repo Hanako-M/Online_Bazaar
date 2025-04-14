@@ -171,7 +171,9 @@ const editInfo=async(req,res)=>{
                 vendor.company = companyFound._id; // Assign ObjectId correctly
             }
         }
+
         await vendor.save();
+       
         res.status(200).json({success:true,message:"info updated successfully"});
     }catch(err){
         console.log(err)    
