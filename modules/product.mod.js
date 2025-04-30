@@ -40,7 +40,11 @@ const prodschema=new Schema({
     },reviews:[{
         type:Schema.Types.ObjectId,
         ref:'review'
-    }]
+    }],
+    overAllrating:{
+        type:Number,
+        default:0.0
+    }
 })
 const product=mongoose.model('product',prodschema)
 module.exports=product

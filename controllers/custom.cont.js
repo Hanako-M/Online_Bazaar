@@ -1,7 +1,10 @@
 const customers=require("../modules/customer.mod.js")
+const vendors=require("../modules/vendor.mod.js")
 const orders=require("../modules/orders.mod.js")
 const product=require("../modules/product.mod.js")
 const reviews=require("../modules/review.mod.js")
+const bcrypt = require('bcryptjs');
+const jwt=require('jsonwebtoken');
 
 const addtoCart=async(req,res)=>{
     const { productid, quantity } = req.body;
@@ -99,53 +102,79 @@ const viewOrders=async(req,res)=>{
 }
 
 const makeOrder = async (req, res) => {
-    const { userid } = req.user;
-  
-    try {
-      const customer = await customers.findById(userid).populate("cart.product");
-  
-      if (!customer.cart.length) {
-        return res.status(400).json({ success: false, message: "Cart is empty" });
-      }
-  
-      // Check stock and calculate total price
-      let totalPrice = 0;
-      for (let item of customer.cart) {
-        if (item.product.inStock < item.quantity) {
-          return res.status(400).json({
-            success: false,
-            message: `Not enough stock for product: ${item.product.name}`
-          });
-        }
-        totalPrice += item.quantity * item.product.price;
-      }
-  
-      // Create order
-      const orderItems = customer.cart.map(item => ({
-        product: item.product._id,
-        quantity: item.quantity
-      }));
-  
-      const newOrder = new orders({
-        products: orderItems,
-        totalprice: totalPrice,
-        userId: userid
-      });
-  
-      await newOrder.save();
-  
-      // Update customer
-      customer.orders.push(newOrder._id);
-      customer.cart = [];
-      await customer.save();
-  
-      res.status(200).json({ success: true, message: "Order made successfully" });
-  
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: "Something went wrong in making the order" });
+  const { userid } = req.user;
+  const { wallet } = req.body; // <-- get wallet field from request body
+
+  try {
+    const customer = await customers.findById(userid).populate("cart.product");
+
+    if (!customer.cart.length) {
+      return res.status(400).json({ success: false, message: "Cart is empty" });
     }
-  };
+
+    // Check stock and calculate total price
+    let totalPrice = 0;
+    for (let item of customer.cart) {
+      if (item.product.inStock < item.quantity) {
+        return res.status(400).json({
+          success: false,
+          message: `Not enough stock for product: ${item.product.name}`
+        });
+      }
+      totalPrice += item.quantity * item.product.price;
+    }
+
+    // Check wallet balance if wallet payment is requested
+    if (wallet === "yes") {
+      if (customer.wallet < totalPrice) {
+        return res.status(400).json({
+          success: false,
+          message: "Not enough balance in wallet"
+        });
+      }
+
+      customer.wallet -= totalPrice; // Deduct from wallet
+    }
+
+    // Create order
+    const orderItems = customer.cart.map(item => ({
+      product: item.product._id,
+      quantity: item.quantity
+    }));
+
+    const newOrder = new orders({
+      products: orderItems,
+      totalprice: totalPrice,
+      userId: userid
+    });
+
+    await newOrder.save();
+
+     // Assign upcoming orders to vendors
+     for (let item of customer.cart) {
+      const vendor = await vendors.findById(item.product.vendor); // assuming product has vendor field
+      vendor.orders.push({
+        product: item.product._id,
+        quantity: item.quantity,
+        customer: customer._id,
+        orderId: newOrder._id
+      });
+      await vendor.save();
+    }
+
+    // Update customer
+    customer.orders.push(newOrder._id);
+    customer.cart = [];
+    await customer.save();
+
+    res.status(200).json({ success: true, message: "Order made successfully" });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Something went wrong in making the order" });
+  }
+};
+
   
 const cancelOrder=async(req,res)=>{     
     const {orderid}=req.body;
@@ -175,7 +204,8 @@ const cancelOrder=async(req,res)=>{
 
 const addReview = async (req, res) => {
     const { userid } = req.user;
-    const { productId, review, rating } = req.body;
+    const { productId, review } = req.body;
+    const rating = parseFloat(req.body.rating);
   
     try {
       // Load customer with orders and nested products
@@ -186,7 +216,7 @@ const addReview = async (req, res) => {
           model: 'product'
         }
       });
-  
+      
       if (!customer) return res.status(404).json({ message: "Customer not found" });
   
       // Check if user has ordered this product
@@ -210,9 +240,18 @@ const addReview = async (req, res) => {
         product: productId,
         customer: userid
       });
-  
+      
       await newReview.save();
-  
+      // 2. Push the new review to product's reviews array
+    const prod = await product.findById(productId);
+    prod.reviews.push(newReview._id);
+    await prod.save();//to see if there exists a rating
+    // 3. Recalculate average rating
+    const allReviews = await reviews.find({ product: productId });
+    const averageRating = allReviews.reduce((acc, r) => acc + r.rating, 0) / allReviews.length;
+
+    prod.overAllrating = averageRating;
+    await prod.save();
       res.status(201).json({ message: "Review added successfully", review: newReview });
   
     } catch (err) {
@@ -274,9 +313,94 @@ const viewInfo=async(req,res)=>{
             phone:customer.phone,
             address:customer.address,
             orders:customer.orders,
+            wallet:customer.wallet,
+
         });
     }catch(err){
         res.status(500).json({error:"something went wrong in viewing the info"});
+    }
+}
+const addtoWallet=async(req,res)=>{
+  const { userid } = req.user; // from auth middleware
+  const { amount, paymentMethod, password } = req.body;
+
+  if (!amount || !paymentMethod || !password) {
+    return res.status(400).json({ message: "Amount, payment method, and password are required." });
+  }
+
+  try {
+    const customer = await customers.findById(userid);
+    if (!customer) return res.status(404).json({ message: "Customer not found" });
+   
+    let method = null;
+    for (const m of customer.paymentMethods) {
+      if (m.type === paymentMethod) {
+        const passMatch = await bcrypt.compare(password, m.password);
+        if (passMatch) {
+         method = m;
+          break;
+        }
+      }
+    }
+    if (!method) {
+      return res.status(401).json({ message: "Invalid payment method or password." });
+    }
+
+    // Add amount to wallet
+    customer.wallet = (customer.wallet || 0) + parseFloat(amount);
+    await customer.save();
+
+    res.status(200).json({ message: "Wallet updated", wallet: customer.wallet });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to update wallet." });
+  }
+}
+const viewWallet=async(req,res)=>{
+    const {userid}=req.user;
+    try{
+        const customer=await customers.findById(userid);
+        res.status(200).json({success:true,
+            wallet:customer.wallet,
+        }); 
+    }catch(err){
+        res.status(500).json({error:"something went wrong in viewing the info"});
+    }
+}
+const addPaymentMethod=async(req,res)=>{
+    const {userid}=req.user;
+    const {type,Id,password}=req.body;
+    try{
+        const customer=await customers.findById(userid);
+        if(!customer){
+            return res.status(404).json({success:false,message:"customer not found"});
+        }
+        console.log("the password is",customer.paymentMethods);
+        customer.paymentMethods.push({
+            type,
+            Id,
+            password     });
+        await customer.save();
+        res.status(200).json({success:true,message:"payment method added successfully"});
+    }catch(err){
+      console.log(err);
+        res.status(500).json({error:"something went wrong in adding the payment method"});
+    }
+}
+const deletePaymentMethod=async(req,res)=>{
+    const {userid}=req.user;
+    const {paymentMethodId}=req.body;
+    try{
+        const customer=await customers.findById(userid);
+        if(!customer){  
+            return res.status(404).json({success:false,message:"customer not found"});
+        }
+        customer.paymentMethods=customer.paymentMethods.filter((method)=>method._id.toString()!==paymentMethodId);
+        await customer.save();
+        res.status(200).json({success:true,message:"payment method deleted successfully"});
+    }catch(err){
+        res.status(500).json({error:"something went wrong in deleting the payment method"});
     }
 }
 module.exports={
@@ -289,5 +413,9 @@ module.exports={
     addReview,
     deleteReview,
     editInfo,
-    viewInfo
+    viewInfo,
+    addtoWallet,
+    viewWallet,
+     addPaymentMethod,
+    deletePaymentMethod,
 }

@@ -3,6 +3,7 @@ const orders=require("../modules/orders.mod.js")
 const products=require("../modules/product.mod.js")
 const categories=require("../modules/categories.mod.js")
 const companies=require("../modules/company.mod.js")
+const customers=require("../modules/customer.mod.js")
 const postProducts = async (req, res) => {
     const { title, description, price, category, image, quantity } = req.body;
     const { userid } = req.user;
@@ -218,4 +219,61 @@ const discount=async(req,res)=>{
         res.status(500).json({error:"something went wrong in adding discount"});
     }   
 }
-module.exports={editInfo,postProducts,viewProducts,removeProduct,updateProduct,addQuantity,viewInfo,discount}
+const changeOrderStatus = async (req, res) => {
+    const { orderId, newStatus } = req.body;
+  
+    try {
+      const order = await orders.findById(orderId).populate("products.product");
+      if (!order) {
+        return res.status(404).json({ success: false, message: "Order not found" });
+      }
+  
+      // Update order status
+      order.status = newStatus;
+      await order.save();
+  
+      // ✅ Update customer's order status if you store detailed orders
+      const customer = await customers.findById(order.userId);
+      if (customer) {
+        // If only storing orderId, you don’t need to update anything here
+        await customer.save();
+      }
+  
+      // ✅ Remove from vendor upcomingOrders if delivered or completed
+      if (newStatus === 'delivered' || newStatus === 'completed') {
+        for (let item of order.products) {
+          const product = item.product;
+          if (!product || !product.vendor) continue;
+  
+          const vendor = await vendors.findById(product.vendor);
+          if (vendor) {
+            const initialLength = vendor.orders.length;
+            orders = vendor.orders.filter(
+              up => !(up.orderId.toString() === order._id.toString() &&
+                      up.product.toString() === product._id.toString())
+            );
+  
+            if (vendor.orders.length !== initialLength) {
+              console.log("✅ Removed from upcoming orders");
+            } else {
+              console.log("⚠️ Nothing matched to remove");
+            }
+  
+            await vendor.save();
+          } else {
+            console.log("⚠️ Vendor not found for product:", product._id);
+          }
+        }
+      }
+  
+      res.status(200).json({ success: true, message: "Order status updated successfully", updatedStatus: order.status });
+  
+    } catch (err) {
+      console.error("❌ Error updating order status:", err);
+      res.status(500).json({ success: false, error: "Something went wrong while updating the order status" });
+    }
+  };
+  
+  
+  
+module.exports={editInfo,postProducts,viewProducts,removeProduct,updateProduct,addQuantity,viewInfo,discount,changeOrderStatus}

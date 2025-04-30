@@ -3,7 +3,7 @@ const vendor=require('../modules/vendor.mod.js');
 const customer=require('../modules/customer.mod.js');
 const jwt=require('jsonwebtoken');
 const bcrypt=require('bcryptjs');
-
+const zxcvbn = require('zxcvbn');
 
 
 //craeting tokens
@@ -16,11 +16,14 @@ const customerSignUp = async (req, res) => {
     console.log(username, email, password,address);
 
     try {
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const result = zxcvbn(password);
+        if (result.score < 3) {
+          return res.status(400).json({ message: "Password is too weak. Please use a stronger one." });
+        }
         const newcust = new customer({
             username,
             email,
-            password: hashedPassword,
+            password,
             address
         });
         await newcust.save();
@@ -41,6 +44,10 @@ const vendorSignUp = async (req, res) => {
     console.log(name, email, password);
 
     try {
+        const result = zxcvbn(password);
+        if (result.score < 3) {
+          return res.status(400).json({ message: "Password is too weak. Please use a stronger one." });
+        }
         const newvend = new vendor({
             name,
             email,
@@ -109,7 +116,7 @@ const signOut = async (req, res) => {
 
     // Expire the cookie
     res.cookie("token", "", { httpOnly: true, expires: new Date(0) });
-
+    // console.log("After Clearing:", req.cookies.token); // Log the token after clearing
     res.status(200).send({
         success: true,
         message: "User signed out successfully"

@@ -3,6 +3,7 @@ const dotenv=require("dotenv")
 let connectDB=require("./config/connectDB.js")
 const custom_router=require("./routers/custom.routes.js")
 const vendor_router=require("./routers/vend.routes.js")
+const prod_router=require("./routers/prod.routes.js")
 // let todos=require("./models/todo.models.js")
 // let users=require("./models/users.models.js")
 const auth_router = require("./routers/auth.routes.js")
@@ -33,7 +34,8 @@ app.use(cookieParser());
        app.use('*',checkUser);
        app.use("/customer",custom_router);
        app.use("/vendor",vendor_router);
-      
+       app.use("/product",prod_router);
+
        app.listen(port,async()=>{ console.log(`server is running successfully, Hana!`)})
     }).catch(err => {
         console.error("❌ ERROR: Database connection failed");

@@ -27,6 +27,11 @@
         }, products:[{
             type:Schema.Types.ObjectId,
             ref:'product',
+        }],orders:[{
+            product: { type: mongoose.Schema.Types.ObjectId, ref: "product" },
+            quantity: Number,
+            customer: { type: mongoose.Schema.Types.ObjectId, ref: "customer" },
+            orderId: { type: mongoose.Schema.Types.ObjectId, ref: "orders" }
         }]
     })
     vendorschema.pre('save', async function (next) {

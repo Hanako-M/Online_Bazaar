@@ -10,6 +10,7 @@ router.post('/addQuantity', controller.addQuantity);
 router.get('/viewInfo', controller.viewInfo);
 router.put('/discount', controller.discount);
 router.post('/editInfo', controller.editInfo);
+router.post('/changeOrderStatus', controller.changeOrderStatus);
      
       
 module.exports = router;

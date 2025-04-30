@@ -12,4 +12,10 @@ router.post('/addReview', controller.addReview);
 router.delete('/deleteReview', controller.deleteReview);
 router.put('/editInfo', controller.editInfo);
 router.get('/viewInfo', controller.viewInfo);
+router.post('/addPaymentMethod', controller.addPaymentMethod);
+router.delete('/deletePaymentMethod', controller.deletePaymentMethod);
+router.post('/addtoWallet', controller.addtoWallet);
+router.get('/viewWallet', controller.viewWallet);
+
+
 module.exports = router;
